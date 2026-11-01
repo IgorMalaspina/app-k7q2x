@@ -231,7 +231,7 @@ const CE=()=>{const l=cats.filter(x=>!isInc(x)&&x!==OUT_FIX);if(cats.includes(OU
 const CI=()=>{const l=cats.filter(x=>isInc(x)&&x!==IN_FIX);if(cats.includes(IN_FIX))l.push(IN_FIX);return l};
 const C=()=>CE().concat(CI());
 /* faturas do cartão: a chave é o mês em que a fatura fecha (AAAA-MM) */
-const card=n=>accounts.find(a=>a.n===n&&a.t===CARD);
+const card=n=>accounts.find(a=>akey(a)===n&&a.t===CARD);
 const keyFrom=(y,m)=>{const d=new Date(y,m,1);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)};
 const keyAdd=(k,n)=>keyFrom(+k.slice(0,4),+k.slice(5,7)-1+n);
 const keyOf=(d,F)=>keyFrom(+d.slice(0,4),+d.slice(5,7)-1+(+d.slice(8,10)>F?1:0));
@@ -241,7 +241,15 @@ const openKey=F=>{const t=iso(),k=t.slice(0,7);return t<=closeDate(k,F)?k:keyAdd
 const fmtKey=k=>k.slice(5,7)+"/"+k.slice(0,4);
 const faFor=(p,a,d)=>{if(p!==CARD)return null;const c=card(a);return c&&c.fc?keyOf(d,c.fc):null};
 function faOpts(cur){const base=iso().slice(0,7),l=[];for(let i=-2;i<=14;i++)l.push(keyAdd(base,i));if(cur&&!l.includes(cur))l.unshift(cur);return `<option value="">Automática</option>`+l.map(k=>`<option value="${k}"${k===cur?" selected":""}>${fmtKey(k)}</option>`).join("")}
-const accNames=cur=>{const l=A().map(a=>a.n);l.push(NI);if(cur&&!l.includes(cur))l.unshift(cur);return l};
+const akey=a=>a.n+" · "+a.o;
+const alabel=a=>a.n+" · "+a.t+" · "+a.o;
+const allowed=p=>p===CARD?[CARD]:p===DIN?["Conta",DIN]:(!p||p===NI)?[]:["Conta"];
+function accOptions(p,cur){
+  const l=A().filter(a=>allowed(p).includes(a.t));
+  let h=`<option value="${NI}"${(!cur||cur===NI)?" selected":""}>${NI}</option>`+l.map(a=>`<option value="${esc(akey(a))}"${akey(a)===cur?" selected":""}>${esc(alabel(a))}</option>`).join("");
+  if(cur&&cur!==NI&&!l.some(a=>akey(a)===cur))h+=`<option value="${esc(cur)}" selected>${esc(cur)} (fora da regra)</option>`;
+  return h;
+}
 
 /* ---------- conversão app <-> banco ---------- */
 const toRow=e=>({data:e.d,valor:e.v,tipo:e.t==="in"?"Receita":"Despesa",categoria:e.c,forma_pagamento:e.p,conta:e.a&&e.a!==NI?e.a:null,quem:e.w,frase_original:e.f||null,parcela_atual:e.pa||null,parcelas:e.pn||null,grupo_parcela:e.g||null,fatura:e.fa||null});
@@ -318,9 +326,16 @@ function parsePaid(text){
   if(ong&&per!==null)v=per;else if(per!==null&&pn>0)v=Math.round(per*pn*100)/100;else if(m)v=num(m[1]);
   if(!(v>0))return null;
   let p=NI;for(const[r,name]of PAYRX){if(r.test(s)){p=name;break}}
-  let a=NI,bl=0;A().forEach(x=>{const nm=x.n.toLowerCase();if(s.includes(nm)&&nm.length>bl){a=x.n;bl=nm.length}});
-  if(a!==NI&&p===NI){const ty=A().find(x=>x.n===a).t;if(ty===CARD)p=CARD;else if(ty===DIN)p=DIN}
-  if(p===DIN&&a===NI&&A().some(x=>x.n===DIN))a=DIN;
+  let a=NI;
+  {let bl=0,grp=[];
+   A().forEach(x=>{const nm=x.n.toLowerCase();if(!s.includes(nm))return;if(nm.length>bl){bl=nm.length;grp=[x]}else if(nm.length===bl)grp.push(x)});
+   if(grp.length===1)a=akey(grp[0]);
+   else if(grp.length>1){const mine=grp.filter(x=>x.o===who);if(mine.length===1)a=akey(mine[0])}}
+  if(a!==NI){
+    const ac=A().find(x=>akey(x)===a);
+    if(p===NI){if(ac.t===CARD)p=CARD;else if(ac.t===DIN)p=DIN}
+    else if(!allowed(p).includes(ac.t))a=NI;
+  }
   if(ong&&p===NI)p=CARD;
   if(ong)d=iso();
   return{v,pn,c,t,p,a,d,ong,asked:{}};
@@ -329,7 +344,7 @@ function parsePaid(text){
 /* ---------- chat com perguntas guiadas ---------- */
 function bubble(cls,html){const d=document.createElement("div");d.className="msg "+cls;d.innerHTML=html;$("chat").appendChild(d);d.scrollIntoView({block:"end"});return d}
 function ask(qtxt,key,list){
-  bubble("app",esc(qtxt)+"<div class=\"chips\">"+list.map(o=>`<button data-k="${key}" data-v="${esc(o)}">${esc(o)}</button>`).join("")+"</div>");
+  bubble("app",esc(qtxt)+"<div class=\"chips\">"+list.map(o=>{const v=typeof o==="string"?o:o.v,l=typeof o==="string"?o:o.l;return `<button data-k="${key}" data-v="${esc(v)}">${esc(l)}</button>`}).join("")+"</div>");
 }
 async function step(){
   const r=pend;
@@ -339,8 +354,9 @@ async function step(){
     let list=[],qt="";
     if(r.t==="in"){list=A().filter(x=>x.t!==CARD);qt="Em qual conta entrou?"}
     else if(r.p===CARD){list=A().filter(x=>x.t===CARD);qt="Qual cartão?"}
-    else if(r.p!==NI&&r.p!==DIN){list=A().filter(x=>x.t==="Conta");qt="De qual conta saiu?"}
-    if(list.length)return ask(qt,"a",list.map(x=>x.n).concat(["Pular"]));
+    else if(r.p===DIN){list=A().filter(x=>allowed(DIN).includes(x.t));qt="De qual conta saiu o dinheiro?"}
+    else if(r.p!==NI){list=A().filter(x=>x.t==="Conta");qt="De qual conta saiu?"}
+    if(list.length)return ask(qt,"a",list.map(x=>({v:akey(x),l:alabel(x)})).concat(["Pular"]));
   }
   if(r.ong&&r.ong.x&&!r.asked.o){r.asked.o=1;return ask("A parcela "+r.ong.x+" já está numa fatura fechada?","o",["Sim, já fechou","Não, ainda está aberta"])}
   if(r.t==="out"&&r.p===CARD&&r.pn===0&&!r.ong&&!r.asked.n){r.asked.n=1;return ask("Foi parcelado?","n",["À vista","2x","3x","4x","5x","6x","10x","12x"])}
@@ -386,7 +402,7 @@ async function send(){
 $("chat").onclick=async ev=>{
   const b=ev.target.closest("button[data-k]");if(!b||!pend||busy)return;
   const k=b.getAttribute("data-k"),v=b.getAttribute("data-v");
-  b.parentElement.remove();bubble("me",esc(v));
+  const lab=b.textContent;b.parentElement.remove();bubble("me",esc(lab));
   if(v!=="Pular"){
     if(k==="p")pend.p=v;
     else if(k==="a")pend.a=v;
@@ -446,7 +462,7 @@ function renderList(){
       <label>Tipo<select id="et">${opts(["Despesa","Receita"],e.t==="in"?"Receita":"Despesa")}</select></label>
       <label>Categoria<select id="ec">${opts(C(),e.c)}</select></label>
       <label>Forma de pagamento<select id="ep">${opts(PAYL,e.p)}</select></label>
-      <label>Conta ou cartão<select id="ea">${opts(accNames(e.a),e.a||NI)}</select></label>
+      <label>Conta ou cartão<select id="ea">${accOptions(e.p,e.a||NI)}</select></label>
       <label>Quem<select id="ew">${opts(["Igor","Dani"],e.w)}</select></label>
       <label>Fatura do cartão<select id="efa">${faOpts(e.fa)}</select></label>
       <label class="full">Descrição<input id="ef" type="text" value="${esc(e.f||"")}"></label></div>
@@ -493,8 +509,8 @@ $("exp").onclick=()=>{
 function renderCad(){
   $("acclist").innerHTML=A().map(a=>{
     const info=a.t===CARD&&a.fc?` · fecha dia ${a.fc} · vence dia ${a.vc}`:(a.t===CARD?" · sem fechamento/vencimento":"");
-    if(editAcc===a.id)return `<div class="item"><div class="top"><b>${esc(a.n)}</b><span>${esc(a.t)}</span></div><div class="edit"><label>De quem é<select id="eo">${opts(["Igor","Dani"],a.o)}</select></label>${a.t===CARD?`<label>Fechamento (dia)<input id="efc" inputmode="numeric" value="${a.fc||""}"></label><label>Vencimento (dia)<input id="evc" inputmode="numeric" value="${a.vc||""}"></label>`:""}</div><div class="acts"><button class="primary" data-x="as" data-i="${esc(a.id)}">Salvar</button><button data-x="ac" data-i="${esc(a.id)}">Cancelar</button></div></div>`;
-    return `<div class="bar"><div class="l"><span>${esc(a.n)}</span><span>${esc(a.t)} · ${esc(a.o)}${info}</span></div><div class="acts"><button data-x="ae" data-i="${esc(a.id)}">Editar</button><button data-x="a" data-i="${esc(a.id)}">Remover</button></div></div>`;
+    if(editAcc===a.id)return `<div class="item"><div class="top"><b>${esc(a.n)}</b><span>${esc(a.t)}</span></div><div class="edit">${a.t===CARD?`<label>Fechamento (dia)<input id="efc" inputmode="numeric" value="${a.fc||""}"></label><label>Vencimento (dia)<input id="evc" inputmode="numeric" value="${a.vc||""}"></label>`:""}</div><div class="acts"><button class="primary" data-x="as" data-i="${esc(a.id)}">Salvar</button><button data-x="ac" data-i="${esc(a.id)}">Cancelar</button></div></div>`;
+    return `<div class="bar"><div class="l"><span>${esc(a.n)}</span><span>${esc(a.t)} · ${esc(a.o)}${info}</span></div><div class="acts">${a.t===CARD?`<button data-x="ae" data-i="${esc(a.id)}">Editar</button>`:""}<button data-x="a" data-i="${esc(a.id)}">Remover</button></div></div>`;
   }).join("")||"Nenhuma conta cadastrada.";
   const chips=(l,fx)=>l.map(c=>`<span class="chip">${esc(c)}${c===fx?"":`<button data-x="c" data-i="${esc(c)}" aria-label="Remover ${esc(c)}">×</button>`}</span>`).join("");
   $("catlist").innerHTML=`<p class="sub" style="margin:0 0 6px">Despesas</p>${chips(CE(),OUT_FIX)}<p class="sub" style="margin:8px 0 6px">Receitas</p>${chips(CI(),IN_FIX)}`;
@@ -508,15 +524,16 @@ $("v5").onclick=async ev=>{
   if(x==="ac"){editAcc=null;render();return}
   if(x==="as"){
     const a=A().find(z=>z.id===i);if(!a)return;
-    const upd={dono:$("eo").value};
+    const upd={};
     if(a.t===CARD){const dd=days($("efc").value,$("evc").value);if(!dd){banner("Informe dias de 1 a 31 para fechamento e vencimento.");return}upd.fechamento=dd.f;upd.vencimento=dd.v}
     if(await run(sb.from("contas").update(upd).eq("id",i)))editAcc=null;
   }
   else if(x==="a"){await run(sb.from("contas").delete().eq("id",i))}
   else if(x==="c"){await run(sb.from("lancamentos").update({categoria:isInc(i)?IN_FIX:OUT_FIX}).eq("categoria",i));await run(sb.from("categorias").delete().eq("nome",i))}
   else if(b.id==="aadd"){
-    const n=$("an").value.replace(/["<>&]/g,"").trim();if(!n)return;
+    const n=$("an").value.replace(/["<>&·]/g,"").trim();if(!n)return;
     const t=$("at").value,row={nome:n,tipo:t,dono:$("ao").value};
+    if(A().some(z=>z.n.toLowerCase()===n.toLowerCase()&&z.o===row.dono)){banner("Já existe uma conta ou cartão com esse nome para essa pessoa.");return}
     if(t===CARD){const dd=days($("afc").value,$("avc").value);if(!dd){banner("Para cartão de crédito, informe o dia do fechamento e o do vencimento (1 a 31).");return}row.fechamento=dd.f;row.vencimento=dd.v}
     if(await run(sb.from("contas").insert(row))){$("an").value="";$("afc").value="";$("avc").value=""}
   }
@@ -577,7 +594,7 @@ function renderAgenda(){
   const due=open.filter(a=>a.dt<=today).length;
   $("t4").querySelector("span").textContent="Agenda"+(due?" ("+due+")":"");
   $("sdn").textContent=saldo===null?"Informe quanto há disponível hoje (soma das contas). O app ajusta sozinho quando você dá baixa em uma conta ou paga uma fatura.":"Atual: "+brl(saldo)+(saldoDt?" · atualizado em "+fmt(saldoDt.slice(0,10)):"");
-  const names=A().filter(a=>a.t===CARD).map(a=>a.n);
+  const names=A().filter(a=>a.t===CARD).map(akey);
   if(entries.some(e=>e.t==="out"&&e.p===CARD&&(!e.a||e.a===NI||!card(e.a))))names.push(NI);
   const evAll=open.filter(a=>a.dt<=lim&&a.v!=null).map(a=>({dt:a.dt,t:a.t,v:a.v,desc:a.desc}));
   names.forEach(n=>invoices(n).forEach(i=>{if(i.due&&i.owed>0&&i.due<=lim)evAll.push({dt:i.due,t:"Pagar",v:i.owed,desc:"Fatura "+n+(i.state==="aberta"?" (parcial, ainda aberta)":"")})}));
@@ -605,7 +622,7 @@ function renderAgenda(){
       const info=i.state==="fechada"?`fechada · vence ${fmt(i.due)}${i.due<today&&i.owed>0?" (vencida)":""}`:i.state==="aberta"?`aberta · fecha ${fmt(i.closing)} · vence ${fmt(i.due)}`:i.state==="futura"?`futura · vence ${fmt(i.due)}`:"edite as compras e escolha a fatura";
       const paying=payCard&&payCard.n===n&&payCard.k===i.key;
       const act=paying
-        ?`<div class="edit"><label>Valor pago<input id="cv" inputmode="decimal" value="${String(Math.max(i.owed,0).toFixed(2)).replace(".",",")}"></label><label>Saiu de<select id="cca">${opts(accNames(""),NI)}</select></label></div><div class="acts"><button class="primary" data-h="ok">Confirmar</button><button data-h="x">Cancelar</button></div>`
+        ?`<div class="edit"><label>Valor pago<input id="cv" inputmode="decimal" value="${String(Math.max(i.owed,0).toFixed(2)).replace(".",",")}"></label><label>Saiu de<select id="cca">${accOptions(DIN,NI)}</select></label></div><div class="acts"><button class="primary" data-h="ok">Confirmar</button><button data-h="x">Cancelar</button></div>`
         :(i.state==="futura"?"":`<div class="acts"><button class="primary" data-h="pay" data-n="${esc(n)}" data-k="${i.key}">Paguei esta fatura</button></div>`);
       return `<div class="item"><div class="top"><b>${title}</b><span style="color:var(${i.owed>0?"--out":"--ink"})">${brl(i.owed)}</span></div><div class="meta">${info}${i.paid>0?` · já pago ${brl(i.paid)}`:""}</div>${act}</div>`;
     }).join("");
@@ -618,7 +635,7 @@ function renderAgenda(){
     const late=a.dt<today,rcv=a.t==="Receber";
     const head=`<div class="item"><div class="top"><b style="color:var(${rcv?"--in":"--out"})">${a.v==null?"Valor a definir":(rcv?"+ ":"− ")+brl(a.v)+(a.est?" (estimado)":"")}</b><span>${fmt(a.dt)}${late?" · vencida":""}</span></div><div class="meta">${esc(a.desc)} · ${esc(a.c)}${a.rec==="Mensal"?" · todo mês":""} · ${esc(a.w)}</div>`;
     if(editAg===a.id)return head+`<div class="edit"><label>Valor<input id="gv" inputmode="decimal" value="${a.v==null?"":String(a.v).replace(".",",")}" placeholder="A definir"></label><label>Vencimento<input id="gd" type="date" value="${a.dt}"></label><label>Tipo<select id="gt">${opts(["Pagar","Receber"],a.t)}</select></label><label>Repete<select id="gr">${opts(["Nenhuma","Mensal"],a.rec)}</select></label><label class="full">Descrição<input id="gx" value="${esc(a.desc)}"></label></div><div class="acts"><button class="primary" data-g="es" data-i="${a.id}">Salvar</button><button data-g="x" data-i="${a.id}">Cancelar</button></div></div>`;
-    if(payingId===a.id)return head+`<div class="edit"><label class="full">Valor<input id="pv" inputmode="decimal" value="${a.v==null?"":String(a.v).replace(".",",")}" placeholder="Informe o valor"></label><label>Forma<select id="pf">${opts(PAYL,"Pix")}</select></label><label>Conta ou cartão<select id="pc">${opts(accNames(""),NI)}</select></label></div><div class="acts"><button class="primary" data-g="ok" data-i="${a.id}">Confirmar</button><button data-g="x" data-i="${a.id}">Cancelar</button></div></div>`;
+    if(payingId===a.id)return head+`<div class="edit"><label class="full">Valor<input id="pv" inputmode="decimal" value="${a.v==null?"":String(a.v).replace(".",",")}" placeholder="Informe o valor"></label><label>Forma<select id="pf">${opts(PAYL,"Pix")}</select></label><label>Conta ou cartão<select id="pc">${accOptions("Pix",NI)}</select></label></div><div class="acts"><button class="primary" data-g="ok" data-i="${a.id}">Confirmar</button><button data-g="x" data-i="${a.id}">Cancelar</button></div></div>`;
     const del=confirmAg===a.id;
     return head+`<div class="acts"><button class="primary" data-g="pay" data-i="${a.id}">${rcv?"Receber":"Pagar"}</button><button data-g="ed" data-i="${a.id}">Editar</button><button class="${del?"danger":""}" data-g="del" data-i="${a.id}">${del?"Confirmar exclusão":"Excluir"}</button></div></div>`;
   }).join("")||"Nenhuma conta em aberto.";
@@ -682,6 +699,9 @@ $("v4").onclick=async ev=>{
   }
   render();
 };
+
+$("list").addEventListener("change",ev=>{if(ev.target.id==="ep")$("ea").innerHTML=accOptions(ev.target.value,NI)});
+$("v4").addEventListener("change",ev=>{if(ev.target.id==="pf")$("pc").innerHTML=accOptions(ev.target.value,NI)});
 
 /* ---------- navegação e filtros ---------- */
 function tab(n){
