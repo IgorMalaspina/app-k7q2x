@@ -18,7 +18,7 @@ html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;display:flex;flex-direction:column;max-width:560px;margin:0 auto;font-size:16px;-webkit-font-smoothing:antialiased}
 [hidden]{display:none!important}
 #app{display:flex;flex-direction:column;flex:1;min-height:0}
-header{padding:14px 18px 8px;display:flex;justify-content:space-between;align-items:center}
+header{padding:22px 18px 10px;display:flex;justify-content:space-between;align-items:center}
 h1{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0}
 .link{border:0;background:none;color:var(--mute);font:inherit;font-size:14px;cursor:pointer;padding:6px 0}
 .banner{margin:0 16px 8px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--out);font-size:13px}
@@ -85,12 +85,14 @@ main{flex:1;overflow-y:auto;padding:0 16px 14px}
 #login input{padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
 #lerr{color:var(--out);font-size:14px;min-height:18px;margin:0}
 .ticker{background:#1f2a27;color:#e8eeeb;overflow:hidden;white-space:nowrap;font-size:13px;padding:7px 0}
-.ticker-track{display:inline-block;padding-left:100%;animation:tick 32s linear infinite}
+.ticker-track{display:flex;width:max-content;animation:tick var(--d,40s) linear infinite}
+.ticker-track.static{animation:none;padding-left:14px}
+.tg{display:flex;padding-right:30px;white-space:nowrap}
 .ticker span{margin-right:30px}
 .ticker i{font-style:normal}
 .ticker .up{color:#7fd6b5}.ticker .down{color:#ff9d8a}
-@keyframes tick{to{transform:translateX(-100%)}}
-@media (prefers-reduced-motion:reduce){.ticker-track{animation:none;padding-left:12px}}
+@keyframes tick{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-track{animation:none;padding-left:12px}.tg+.tg{display:none}}
 .hero{margin-bottom:12px}.hero small{display:block;color:var(--mute);font-size:12px}.hero strong{font-size:30px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .kpis2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 </style>
@@ -108,8 +110,8 @@ main{flex:1;overflow-y:auto;padding:0 16px 14px}
 </div>
 
 <div id="app" hidden>
-  <div class="ticker" id="ticker" aria-label="Cotações do dia"><div class="ticker-track" id="tk">Carregando cotações…</div></div>
   <header><h1>Gastos da casa</h1><div><button class="link" id="rf" style="margin-right:16px">Atualizar</button><button class="link" id="out">Sair</button></div></header>
+  <div class="ticker" id="ticker" aria-label="Cotações do dia"><div class="ticker-track static" id="tk">Carregando cotações…</div></div>
   <div class="banner" id="banner" hidden></div>
   <div class="period" id="period" hidden>
     <select id="fm" aria-label="Mês"></select>
@@ -153,7 +155,7 @@ main{flex:1;overflow-y:auto;padding:0 16px 14px}
     <section id="v5" hidden>
       <div class="panel"><h2>Contas e cartões</h2><div id="acclist"></div>
         <div class="edit"><label class="full">Nome<input id="an" placeholder="Ex.: Nubank, Cartão Itaú" aria-label="Nome da conta ou cartão"></label>
-          <label>Tipo<select id="at"><option>Conta</option><option>Cartão de crédito</option><option>Dinheiro</option></select></label>
+          <label>Tipo<select id="at"><option>Conta</option><option>Cartão de crédito</option><option>Dinheiro</option><option value="Reserva">Caixinha / reserva (conta separada)</option></select></label>
           <label>De quem é<select id="ao"><option>Igor</option><option>Dani</option></select></label>
           <label id="fcl" hidden>Fechamento (dia)<input id="afc" inputmode="numeric" placeholder="Ex.: 3"></label>
           <label id="fvl" hidden>Vencimento (dia)<input id="avc" inputmode="numeric" placeholder="Ex.: 10"></label></div>
@@ -319,7 +321,7 @@ async function refresh(){
     const lm=await sb.from("limites").select("*");if(lm.error)throw lm.error;
     limites={};lm.data.forEach(r=>{limites[r.categoria]=Number(r.valor)});
     const cx=await fetchAll("caixinhas"),mv=await fetchAll("caixinha_movs"),mo=await fetchAll("moeda_movs");
-    caixas=cx.map(r=>({id:String(r.id),nome:r.nome,alvo:Number(r.alvo),prazo:r.prazo||"",onde:r.onde||""}));
+    caixas=cx.map(r=>({id:String(r.id),nome:r.nome,alvo:Number(r.alvo),prazo:r.prazo||"",onde:r.onde||"",conta:r.conta||""}));
     movs=mv.map(r=>({id:String(r.id),cid:String(r.caixinha_id),v:Number(r.valor),d:r.data,w:r.quem,desc:!!r.descontou_saldo,t:r.tipo||"Aporte",ref:r.ref_moeda?String(r.ref_moeda):null}));
     mm=mo.map(r=>({id:String(r.id),cid:r.caixinha_id?String(r.caixinha_id):null,d:r.data,moeda:r.moeda,t:r.tipo,q:Number(r.valor_moeda),brl:Number(r.valor_brl),iof:Number(r.iof),tx:Number(r.taxas),total:Number(r.total_brl),onde:r.onde||"",obs:r.obs||"",w:r.quem}));
   }catch(e){limites={};caixas=[];movs=[];mm=[];banner("Limites e caixinhas indisponíveis. Confira se o script SQL mais recente foi executado no Supabase.")}
@@ -792,6 +794,8 @@ const avgCost=o=>o.cq?o.ct/o.cq:0;
 function foreignVal(h){let t=0;for(const k in h)t+=h[k].q*(rates[k]||avgCost(h[k]));return t}
 const movLabel=m=>m.t==="Rendimento"?"rendeu":m.t==="Ajuste"?"ajuste de":m.t==="Conversão"?(m.v<0?"converteu":"recebeu da venda"):(m.v>0?"guardou":"retirou");
 const clean=v=>String(v).replace(/["<>&]/g,"").trim();
+const cxContaOpts=cur=>`<option value="">Não informar</option>`+A().filter(a=>a.t==="Reserva"||a.t==="Conta").map(a=>`<option value="${esc(akey(a))}"${akey(a)===cur?" selected":""}>${esc(alabel(a))}</option>`).join("");
+const cxWhere=c=>{const a=A().find(z=>akey(z)===c.conta);const t=[a?alabel(a):"",c.onde].filter(Boolean).join(" · ");return t?` · ${esc(t)}`:""};
 function renderRes(){
   renderCx();renderMoedas();
   const sel=$("rcc"),cur=sel.value;
@@ -808,13 +812,13 @@ function renderCx(){
     else if(c.prazo){const n=monthsTo(c.prazo);plano=n<1?(c.prazo<today?"Prazo vencido. ":"Prazo neste mês. ")+`Faltam ${brl(falta)}.`:`Faltam ${brl(falta)} em ${n} ${n===1?"mês":"meses"}: guardar ${brl(Math.ceil(falta/n*100)/100)} por mês.`}
     else plano=`Faltam ${brl(falta)}.`;
     const fx=Object.keys(h).filter(k=>Math.abs(h[k].q)>=0.005).map(k=>` · ${fmtM(h[k].q,k)} (≈ ${brl(h[k].q*(rates[k]||avgCost(h[k])))})`).join("");
-    const head=`<div class="item"><div class="top"><b>${esc(c.nome)}</b><span>${brl(tot)} / ${brl(c.alvo)}</span></div><div class="track" style="margin:8px 0"><div class="fill in" style="width:${pc}%"></div></div><div class="meta">Em reais ${brl(bal)}${fx}${rend?` · rendeu ${brl(rend)}`:""}<br>${plano}${c.prazo?` · prazo ${fmt(c.prazo)}`:""}${c.onde?` · ${esc(c.onde)}`:""}</div>`;
-    if(editCx===c.id)return head+`<div class="edit"><label class="full">Nome<input id="cxen" value="${esc(c.nome)}"></label><label>Valor-alvo<input id="cxea" inputmode="decimal" value="${String(c.alvo).replace(".",",")}"></label><label>Prazo<input id="cxep" type="date" value="${c.prazo}"></label><label class="full">Onde fica o dinheiro<input id="cxel" value="${esc(c.onde)}"></label></div><div class="acts"><button class="primary" data-c="es" data-i="${c.id}">Salvar</button><button data-c="nx">Cancelar</button></div></div>`;
+    const head=`<div class="item"><div class="top"><b>${esc(c.nome)}</b><span>${brl(tot)} / ${brl(c.alvo)}</span></div><div class="track" style="margin:8px 0"><div class="fill in" style="width:${pc}%"></div></div><div class="meta">Em reais ${brl(bal)}${fx}${rend?` · rendeu ${brl(rend)}`:""}<br>${plano}${c.prazo?` · prazo ${fmt(c.prazo)}`:""}${cxWhere(c)}</div>`;
+    if(editCx===c.id)return head+`<div class="edit"><label class="full">Nome<input id="cxen" value="${esc(c.nome)}"></label><label>Valor-alvo<input id="cxea" inputmode="decimal" value="${String(c.alvo).replace(".",",")}"></label><label>Prazo<input id="cxep" type="date" value="${c.prazo}"></label><label class="full">Onde fica o dinheiro<select id="cxec">${cxContaOpts(c.conta)}</select></label><label class="full">Detalhe (opcional)<input id="cxel" value="${esc(c.onde)}" placeholder="Ex.: modalidade ou nome da caixinha no banco"></label></div><div class="acts"><button class="primary" data-c="es" data-i="${c.id}">Salvar</button><button data-c="nx">Cancelar</button></div></div>`;
     if(movCx&&movCx.id===c.id){
       const k=movCx.kind,okBtn=`<div class="acts"><button class="primary" data-c="mok" data-i="${c.id}">Confirmar</button><button data-c="nx">Cancelar</button></div></div>`;
       if(k==="dep"||k==="ret")return head+`<div class="edit"><label class="full">${k==="dep"?"Quanto você guardou":"Quanto você retirou"}<input id="cxv" inputmode="decimal"></label><label class="full" style="display:flex;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" id="cxd" style="width:auto" ${saldo!==null?"checked":"disabled"}> ${k==="dep"?"Descontar do":"Devolver ao"} saldo disponível</label></div>`+okBtn;
       if(k==="rend")return head+`<div class="edit"><label class="full">Como informar<select id="rmm"><option value="v">Valor que rendeu</option><option value="s">Saldo atual da caixinha</option></select></label><label class="full">Valor (R$)<input id="rmv" inputmode="decimal"></label></div><p class="sub" style="margin:0 0 8px">Saldo em reais registrado no app: ${brl(bal)}. Se informar o saldo atual, o app calcula a diferença.</p>`+okBtn;
-      if(k==="conv")return head+`<div class="edit"><label>Moeda<select id="cvm"><option>EUR</option><option>USD</option><option>CHF</option></select></label><label>Data<input id="cvd" type="date" value="${today}"></label><label>Valor recebido (na moeda)<input id="cvq" inputmode="decimal" placeholder="Ex.: 500"></label><label>Compra em R$ (sem impostos)<input id="cvb" inputmode="decimal"></label><label>IOF (R$)<input id="cvi" inputmode="decimal" placeholder="0"></label><label>Outras taxas (R$)<input id="cvt" inputmode="decimal" placeholder="0"></label><label class="full">Onde fica o dinheiro<input id="cvo" placeholder="Ex.: carteira, cartão pré-pago, conta global"></label><label class="full">Observação (opcional)<input id="cvx"></label></div><p class="sub" id="cvp" style="margin:0 0 8px">Será descontado do saldo em reais desta caixinha (${brl(bal)}).</p>`+okBtn;
+      if(k==="conv")return head+`<div class="edit"><label>Moeda<select id="cvm"><option>EUR</option><option>USD</option><option>CHF</option></select></label><label>Data da compra<input id="cvd" type="date" value="${today}"></label><label>Quantidade recebida<input id="cvq" inputmode="decimal" placeholder="Ex.: 500"></label><label>Cotação paga (R$ por unidade)<input id="cvr" inputmode="decimal" placeholder="Ex.: 5,52"></label><label class="full">Valor da compra em R$ (sem IOF e tarifa)<input id="cvb" inputmode="decimal" placeholder="Calculado, ou informe direto"></label><label>IOF<input id="cvi" inputmode="decimal" placeholder="0"></label><label>IOF em<select id="cvu"><option value="r">R$ no total</option><option value="u">R$ por unidade</option><option value="p">% da compra</option></select></label><label>Tarifa<input id="cvt" inputmode="decimal" placeholder="0"></label><label>Tarifa em<select id="cvv"><option value="r">R$ no total</option><option value="u">R$ por unidade</option><option value="p">% da compra</option></select></label><label class="full">Onde fica o dinheiro<input id="cvo" placeholder="Ex.: carteira, cartão pré-pago, conta global"></label><label class="full">Observação (opcional)<input id="cvx"></label></div><div class="acts" style="margin-bottom:8px"><button data-c="usar">Usar cotação de hoje</button></div><p class="sub" id="cvp" style="margin:0 0 8px">Pode ser uma data passada: informe a cotação que você realmente pagou, não a de hoje. O total será descontado do saldo em reais desta caixinha (${brl(bal)}).</p>`+okBtn;
       if(k==="out"){
         const ks=Object.keys(h).filter(z=>h[z].q>=0.005);
         if(!ks.length)return head+`<p class="sub">Esta caixinha não tem moeda estrangeira.</p><div class="acts"><button data-c="nx">Fechar</button></div></div>`;
@@ -825,7 +829,7 @@ function renderCx(){
     const del=confirmCx===c.id;
     return head+`<div class="acts"><button class="primary" data-c="dep" data-i="${c.id}">Guardei</button><button data-c="ret" data-i="${c.id}">Retirei</button><button data-c="rend" data-i="${c.id}">Rendimento</button><button data-c="conv" data-i="${c.id}">Converter</button><button data-c="out" data-i="${c.id}">Saída em moeda</button><button data-c="ed" data-i="${c.id}">Editar</button><button class="${del?"danger":""}" data-c="del" data-i="${c.id}">${del?"Confirmar exclusão":"Excluir"}</button></div>${ms}</div>`;
   }).join("");
-  const nf=cxNew?`<div class="item"><div class="edit"><label class="full">Nome<input id="cxn" placeholder="Ex.: Viagem"></label><label>Valor-alvo (R$)<input id="cxa" inputmode="decimal" placeholder="Ex.: 8000"></label><label>Prazo<input id="cxp" type="date"></label><label class="full">Onde fica o dinheiro (opcional)<input id="cxl" placeholder="Ex.: caixinha do Nubank"></label></div><div class="acts"><button class="primary" data-c="ns">Criar</button><button data-c="nx">Cancelar</button></div></div>`:`<div class="acts" style="margin-top:6px"><button data-c="new">Nova caixinha</button></div>`;
+  const nf=cxNew?`<div class="item"><div class="edit"><label class="full">Nome<input id="cxn" placeholder="Ex.: Viagem"></label><label>Valor-alvo (R$)<input id="cxa" inputmode="decimal" placeholder="Ex.: 8000"></label><label>Prazo<input id="cxp" type="date"></label><label class="full">Onde fica o dinheiro<select id="cxc">${cxContaOpts("")}</select></label><label class="full">Detalhe (opcional)<input id="cxl" placeholder="Ex.: modalidade ou nome da caixinha no banco"></label></div><div class="acts"><button class="primary" data-c="ns">Criar</button><button data-c="nx">Cancelar</button></div></div>`:`<div class="acts" style="margin-top:6px"><button data-c="new">Nova caixinha</button></div>`;
   $("cx").innerHTML=(list||'<div class="meta">Nenhuma caixinha ainda.</div>')+nf;
 }
 function renderMoedas(){
@@ -833,11 +837,11 @@ function renderMoedas(){
   const h=holdings(()=>true);
   const cards=Object.keys(h).filter(k=>Math.abs(h[k].q)>=0.005||h[k].cq>0).map(k=>{
     const o=h[k],avg=avgCost(o),r=rates[k],now=r?o.q*r:null,dif=now===null?0:now-o.q*avg;
-    return `<div class="item"><div class="top"><b>${fmtM(o.q,k)}</b><span>${now===null?"—":"≈ "+brl(now)}</span></div><div class="meta">Custo médio ${brl(avg)} por ${SYM[k]||k} (com IOF e taxas)${r?` · cotação de hoje ${brl(r)}`:""}${now===null?"":` · ${dif>=0?"ganho":"perda"} de ${brl(Math.abs(dif))} sobre o custo`}</div></div>`;
+    return `<div class="item"><div class="top"><b>${fmtM(o.q,k)}</b><span>${now===null?"—":"≈ "+brl(now)}</span></div><div class="meta">Custo real médio ${brl(avg)} por ${SYM[k]||k} (com IOF e tarifa)${r?` · cotação de hoje ${brl(r)}`:""}${now===null?"":` · ${dif>=0?"ganho":"perda"} de ${brl(Math.abs(dif))} sobre o custo`}</div></div>`;
   }).join("");
   const hist=mm.slice().sort((a,b)=>b.d<a.d?-1:1).slice(0,8).map(m=>{
     const cx=caixas.find(c=>c.id===m.cid);
-    const det=m.t==="Compra"?`pagou ${brl(m.total)} (compra ${brl(m.brl)}${m.iof?` + IOF ${brl(m.iof)}`:""}${m.tx?` + taxas ${brl(m.tx)}`:""}) · cotação efetiva ${brl(m.total/m.q)}`:m.t==="Venda"?`recebeu ${brl(m.total)} líquidos`:"uso na viagem";
+    const det=m.t==="Compra"?`compra de ${fmtM(m.q,m.moeda)} × ${brl(m.brl/m.q)} = ${brl(m.brl)}${m.iof?` · IOF ${brl(m.iof)}`:""}${m.tx?` · tarifa ${brl(m.tx)}`:""} → pago ${brl(m.total)} · custo real ${brl(m.total/m.q)} por ${SYM[m.moeda]||m.moeda}`:m.t==="Venda"?`recebeu ${brl(m.total)} líquidos`:"uso na viagem";
     return `<div class="meta" style="margin:6px 0">${fmt(m.d)} · ${m.t} ${fmtM(m.q,m.moeda)} · ${det}${cx?" · "+esc(cx.nome):""}${m.onde?" · "+esc(m.onde):""}${m.obs?" · "+esc(m.obs):""} <button class="link" data-mm="${m.id}">Desfazer</button></div>`;
   }).join("");
   $("moedas").innerHTML=cards+`<p class="sub" style="margin:10px 0 2px">Últimos registros</p>`+hist;
@@ -851,10 +855,28 @@ async function undoMoeda(id){
   await run(sb.from("caixinha_movs").delete().eq("ref_moeda",id));
   return await run(sb.from("moeda_movs").delete().eq("id",id));
 }
+function convCalc(){
+  const q=num($("cvq").value),b=num($("cvb").value)||0,m=$("cvm").value;
+  const calc=(v,u)=>{v=num(v)||0;return u==="u"?v*q:u==="p"?b*v/100:v};
+  const iof=r2(calc($("cvi").value,$("cvu").value)),tar=r2(calc($("cvt").value,$("cvv").value));
+  return{q,b,m,iof,tar,total:r2(b+iof+tar)};
+}
+function convPreview(){
+  const c=convCalc();
+  if(!(c.q>0&&c.b>0)){$("cvp").textContent="Informe a quantidade e a cotação que você pagou (ou o valor da compra em R$) para ver o resumo.";return}
+  const s=SYM[c.m]||c.m;
+  $("cvp").textContent=`Compra: ${fmtM(c.q,c.m)} × ${brl(c.b/c.q)} = ${brl(c.b)}. IOF: ${brl(c.iof)}. Tarifa: ${brl(c.tar)}. Total pago: ${brl(c.total)}. Custo real: ${brl(c.total/c.q)} por ${s} (cotação ${brl(c.b/c.q)} + ${brl((c.total-c.b)/c.q)} de IOF e tarifa).`+(rates[c.m]?` Cotação comercial de hoje: ${brl(rates[c.m])}.`:"");
+}
+function syncConv(from){
+  const q=num($("cvq").value),r=num($("cvr").value),b=num($("cvb").value);
+  if(from==="cvb"){if(q>0&&b>0)$("cvr").value=(b/q).toFixed(4).replace(".",",")}
+  else if(q>0&&r>0)$("cvb").value=r2(q*r).toFixed(2).replace(".",",");
+  convPreview();
+}
 $("v6").addEventListener("input",ev=>{
-  if(!ev.target.id||ev.target.id.slice(0,2)!=="cv"||!$("cvp"))return;
-  const q=num($("cvq").value),b=num($("cvb").value)||0,i=num($("cvi").value)||0,t=num($("cvt").value)||0,tot=r2(b+i+t),m=$("cvm").value;
-  $("cvp").textContent=q>0&&b>0?`Total a descontar da caixinha: ${brl(tot)} · cotação efetiva: ${brl(tot/q)} por ${SYM[m]||m}${rates[m]?` (cotação comercial de hoje: ${brl(rates[m])})`:""}.`:"Informe o valor recebido e a compra em R$ para ver o total e a cotação efetiva.";
+  const id=ev.target.id;
+  if(!id||id.slice(0,2)!=="cv"||id==="cvp"||!$("cvp"))return;
+  if(id==="cvq"||id==="cvr"||id==="cvb")syncConv(id);else convPreview();
 });
 $("v6").onclick=async ev=>{
   const b=ev.target.closest("button");if(!b)return;
@@ -871,19 +893,24 @@ $("v6").onclick=async ev=>{
   const mmid=b.getAttribute("data-mm");
   if(mmid){if(await undoMoeda(mmid))await refresh();return}
   const c=b.getAttribute("data-c"),id=b.getAttribute("data-i"),cx=caixas.find(z=>z.id===id);
+  if(c==="usar"){
+    const m=$("cvm").value;
+    if(!rates[m]){banner("A cotação de hoje não está disponível no momento.");return}
+    $("cvr").value=rates[m].toFixed(4).replace(".",",");syncConv("cvr");return;
+  }
   if(c==="new"){cxNew=true;editCx=null;movCx=null}
   else if(c==="nx"){cxNew=false;editCx=null;movCx=null;confirmCx=null}
   else if(c==="ns"){
     const nome=clean($("cxn").value),alvo=num($("cxa").value),prazo=$("cxp").value,onde=clean($("cxl").value);
     if(!nome||!(alvo>0)){banner("Informe o nome e o valor-alvo da caixinha.");return}
-    if(await run(sb.from("caixinhas").insert({nome,alvo,prazo:prazo||null,onde:onde||null}))){cxNew=false;await refresh()}
+    if(await run(sb.from("caixinhas").insert({nome,alvo,prazo:prazo||null,onde:onde||null,conta:$("cxc").value||null}))){cxNew=false;await refresh()}
     return;
   }
   else if(c==="ed"){editCx=id;cxNew=false;movCx=null}
   else if(c==="es"&&cx){
     const nome=clean($("cxen").value),alvo=num($("cxea").value),prazo=$("cxep").value,onde=clean($("cxel").value);
     if(!nome||!(alvo>0)){banner("Informe o nome e o valor-alvo da caixinha.");return}
-    if(await run(sb.from("caixinhas").update({nome,alvo,prazo:prazo||null,onde:onde||null}).eq("id",id))){editCx=null;await refresh()}
+    if(await run(sb.from("caixinhas").update({nome,alvo,prazo:prazo||null,onde:onde||null,conta:$("cxec").value||null}).eq("id",id))){editCx=null;await refresh()}
     return;
   }
   else if(["dep","ret","rend","conv","out"].includes(c)){movCx={id,kind:c};editCx=null;cxNew=false}
@@ -908,13 +935,12 @@ $("v6").onclick=async ev=>{
       return;
     }
     if(k==="conv"){
-      const q=num($("cvq").value),bb=num($("cvb").value),i=num($("cvi").value)||0,t=num($("cvt").value)||0,d=$("cvd").value;
-      if(!(q>0)||!(bb>0)||!/^\d{4}-\d{2}-\d{2}$/.test(d)){banner("Informe a data, o valor recebido na moeda e a compra em R$.");return}
-      const total=r2(bb+i+t);
-      if(total>cxBal(cid)+0.004){banner("O total ("+brl(total)+") é maior que o saldo em reais da caixinha ("+brl(cxBal(cid))+"). Registre antes um aporte ou atualize o saldo.");return}
-      const{data:ins,error}=await sb.from("moeda_movs").insert({caixinha_id:cid,data:d,moeda:$("cvm").value,tipo:"Compra",valor_moeda:q,valor_brl:bb,iof:i,taxas:t,total_brl:total,onde:clean($("cvo").value)||null,obs:clean($("cvx").value)||null,quem:who}).select("id").single();
+      const c2=convCalc(),d=$("cvd").value;
+      if(!(c2.q>0)||!(c2.b>0)||!/^\d{4}-\d{2}-\d{2}$/.test(d)){banner("Informe a data, a quantidade recebida e a cotação paga (ou o valor da compra em R$).");return}
+      if(c2.total>cxBal(cid)+0.004){banner("O total ("+brl(c2.total)+") é maior que o saldo em reais da caixinha ("+brl(cxBal(cid))+"). Registre antes um aporte ou atualize o saldo.");return}
+      const{data:ins,error}=await sb.from("moeda_movs").insert({caixinha_id:cid,data:d,moeda:c2.m,tipo:"Compra",valor_moeda:c2.q,valor_brl:c2.b,iof:c2.iof,taxas:c2.tar,total_brl:c2.total,onde:clean($("cvo").value)||null,obs:clean($("cvx").value)||null,quem:who}).select("id").single();
       if(error){banner("Não foi possível salvar: "+error.message);return}
-      if(await run(sb.from("caixinha_movs").insert({caixinha_id:cid,valor:-total,data:d,quem:who,descontou_saldo:false,tipo:"Conversão",ref_moeda:ins.id}))){movCx=null;await refresh()}
+      if(await run(sb.from("caixinha_movs").insert({caixinha_id:cid,valor:-c2.total,data:d,quem:who,descontou_saldo:false,tipo:"Conversão",ref_moeda:ins.id}))){movCx=null;await refresh()}
       return;
     }
     if(k==="out"){
@@ -953,6 +979,14 @@ $("v6").onclick=async ev=>{
 };
 
 /* ---------- cotações ---------- */
+function setTicker(html){
+  const tk=$("tk");
+  if(!html){tk.className="ticker-track static";tk.dataset.h="";tk.textContent="Cotações indisponíveis no momento";return}
+  if(tk.dataset.h===html)return;
+  tk.dataset.h=html;tk.className="ticker-track";
+  tk.innerHTML=`<div class="tg">${html}</div><div class="tg" aria-hidden="true">${html}</div>`;
+  requestAnimationFrame(()=>{const w=tk.scrollWidth/2;tk.style.setProperty("--d",Math.max(20,w/45)+"s")});
+}
 async function loadRates(){
   try{
     const r=await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,CHF-BRL",{cache:"no-store"});
@@ -965,8 +999,8 @@ async function loadRates(){
       rates[k.slice(0,3)]=bid;
       out.push(`<span>${n} <b>${bid.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:4})}</b> <i class="${pc>=0?"up":"down"}">${pc>=0?"▲":"▼"} ${Math.abs(pc||0).toFixed(2).replace(".",",")}%</i></span>`);
     });
-    $("tk").innerHTML=out.length?out.join("")+`<span style="opacity:.7">cotação comercial · ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</span>`:"Cotações indisponíveis no momento";
-  }catch(e){$("tk").textContent="Cotações indisponíveis no momento"}
+    setTicker(out.length?out.join("")+'<span style="opacity:.7">cotação comercial</span>':"");
+  }catch(e){setTicker("")}
   renderRes();
 }
 setInterval(()=>{if(!document.hidden&&!$("app").hidden)loadRates()},300000);
