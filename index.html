@@ -1270,5 +1270,88 @@ Object.keys(SUBS).forEach(id=>{
 });
 })();
 </script>
+  <style>
+.sc{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 10px;font-size:14px}
+.sc b{font-size:18px;letter-spacing:-.01em}.sc b.neg{color:var(--out)}
+.sc input{flex:1;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 2px 5px rgba(70,82,80,.14)}
+</style>
+<script>
+(function(){
+const X={base:{},tr:[],ok:false};
+try{const l=document.createElement("link");l.rel="manifest";l.href="manifest.webmanifest";document.head.appendChild(l);
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}
+ 
+const saldoConta=a=>{
+  const k=akey(a);let s=X.base[a.id]||0;
+  entries.forEach(e=>{if(e.a===k&&e.p!==CARD)s+=e.t==="in"?e.v:-e.v});
+  pags.forEach(p=>{if(p.conta===k)s-=p.v});
+  X.tr.forEach(t=>{if(t.o===k)s-=t.v;if(t.dt===k)s+=t.v});
+  return r2(s);
+};
+const contas=()=>accounts.filter(a=>a.t!==CARD);
+const total=()=>r2(contas().reduce((s,a)=>s+saldoConta(a),0));
+const neg=n=>`<b class="${n<0?"neg":""}">${brl(n)}</b>`;
+ 
+const p=document.createElement("div");
+p.className="panel wide";p.id="trp";p.dataset.s="contas";
+p.innerHTML=`<h2>Saldos e transferências</h2><p class="sub" id="trs" style="margin:0 0 12px"></p>
+<p class="fh" style="margin-top:6px">Transferir entre contas</p>
+<div class="edit"><label>De<select id="trf"></select></label><label>Para<select id="trt"></select></label><label>Valor (R$)<input id="trv" inputmode="decimal" placeholder="Ex.: 500"></label><label>Data<input id="trd" type="date"></label></div>
+<div class="acts"><button class="primary" id="trb">Transferir</button></div><div id="trl" style="margin-top:12px"></div>`;
+$("acclist").closest(".panel").after(p);
+const sel=$("v5").querySelector('.subtabs [aria-selected="true"]');
+if(sel)p.hidden=sel.dataset.k!=="contas";
+ 
+async function loadX(){
+  try{
+    const[c,t]=await Promise.all([fetchAll("contas"),fetchAll("transferencias")]);
+    X.base={};c.forEach(r=>{X.base[String(r.id)]=Number(r.saldo_base)||0});
+    X.tr=t.map(r=>({id:String(r.id),d:r.data,o:r.origem,dt:r.destino,v:Number(r.valor)}));X.ok=true;
+  }catch(e){X.ok=false}
+}
+function aug(){
+  if(!X.ok){$("trs").textContent="Para ativar saldos e transferências, rode o arquivo SQL no Supabase e atualize a página.";return}
+  const ch=$("acclist").children;
+  accounts.forEach((a,i)=>{
+    const el=ch[i];if(!el||a.t===CARD||el.querySelector(".sx"))return;
+    const box=document.createElement("div");box.className="sc sx";
+    box.innerHTML=`<span>Saldo ${neg(saldoConta(a))}</span><button class="link" data-sx="adj" data-i="${a.id}">Ajustar saldo</button>`;
+    const acts=el.querySelector(".acts");acts?el.insertBefore(box,acts):el.appendChild(box);
+  });
+  const opt=contas().map(a=>`<option value="${esc(akey(a))}">${esc(alabel(a))}</option>`).join(""),f=$("trf").value,t=$("trt").value;
+  $("trf").innerHTML=opt;$("trt").innerHTML=opt;
+  if(f)$("trf").value=f;
+  if(t)$("trt").value=t;else if(contas()[1])$("trt").value=akey(contas()[1]);
+  if(!$("trd").value)$("trd").value=iso();
+  $("trs").innerHTML=`Soma dos saldos das contas: ${neg(total())} <button class="link" id="trsum">Usar como saldo disponível</button>`;
+  $("trl").innerHTML=X.tr.slice().sort((a,b)=>a.d===b.d?+b.id-+a.id:(b.d<a.d?-1:1)).slice(0,6).map(t=>`<div class="meta" style="margin:6px 0">${fmt(t.d)} · ${esc(t.o)} → ${esc(t.dt)} · ${brl(t.v)} <button class="link" data-tu="${t.id}">Desfazer</button></div>`).join("");
+}
+const _render=render,_refresh=refresh;
+render=function(){_render();try{aug()}catch(e){}};
+refresh=async function(){await _refresh();await loadX();try{aug()}catch(e){}};
+ 
+$("v5").addEventListener("click",async e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const sx=b.dataset.sx,id=b.dataset.i;
+  if(sx==="adj"){
+    b.closest(".sx").innerHTML=`<input id="sxv" inputmode="decimal" placeholder="Saldo atual (R$)"><button class="link" data-sx="ok" data-i="${id}">Salvar</button><button class="link" data-sx="no">Cancelar</button>`;
+  }else if(sx==="no"){aug();render()}
+  else if(sx==="ok"){
+    const a=accounts.find(z=>z.id===id),v=num($("sxv").value);if(!a||isNaN(v))return;
+    const mov=saldoConta(a)-(X.base[id]||0);
+    if(await run(sb.from("contas").update({saldo_base:r2(v-mov)}).eq("id",id)))await refresh();
+  }else if(b.id==="trsum"){
+    if(await setSaldo(total())){banner("Saldo disponível atualizado com a soma das contas.","ok");await refresh()}
+  }else if(b.id==="trb"){
+    const o=$("trf").value,d=$("trt").value,v=num($("trv").value),dt=$("trd").value;
+    if(!o||!d||o===d){banner("Escolha duas contas diferentes.");return}
+    if(!(v>0)||!/^\d{4}-\d{2}-\d{2}$/.test(dt)){banner("Informe o valor e a data.");return}
+    if(await run(sb.from("transferencias").insert({data:dt,origem:o,destino:d,valor:v,quem:who}))){$("trv").value="";banner("Transferência registrada.","ok");await refresh()}
+  }else if(b.dataset.tu){
+    if(await run(sb.from("transferencias").delete().eq("id",b.dataset.tu)))await refresh();
+  }
+});
+})();
+</script>
 </body>
 </html>
