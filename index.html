@@ -1211,5 +1211,64 @@ document.addEventListener("visibilitychange",()=>{
   if(data&&data.session)await enter();else showLogin();
 })();
 </script>
+  <style>
+.subtabs{display:flex;gap:4px;padding:5px;margin-bottom:14px;border-radius:999px;background:var(--glass-bg);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-edge);box-shadow:var(--glass-soft);overflow-x:auto;grid-column:1/-1;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs button{flex:1;white-space:nowrap;border:0;background:none;color:var(--mute);font-size:13.5px;font-weight:600;padding:10px 16px;border-radius:999px;cursor:pointer}
+.subtabs button:hover{color:var(--g-deep);background:rgba(255,255,255,.4)}
+.subtabs button[aria-selected="true"]{background:linear-gradient(180deg,var(--g-hi),var(--g) 60%,var(--g-lo));color:#fff;box-shadow:0 4px 10px rgba(20,120,70,.35),inset 0 1px 0 rgba(255,255,255,.45)}
+.fh{margin:18px 0 8px;padding-top:16px;border-top:1px dashed var(--line);font-size:12.5px;font-weight:700;color:var(--g-deep);letter-spacing:.06em;text-transform:uppercase}
+.panel>.edit{padding:16px;border-radius:22px;background:rgba(255,255,255,.34);border:1px solid rgba(255,255,255,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.item{transition:transform .15s ease,box-shadow .2s ease}
+@media (hover:hover){.panel .item:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(55,68,66,.16),inset 0 1px 0 rgba(255,255,255,.9)}}
+@media (min-width:600px){
+  .wide{grid-column:1/-1}
+  #acclist,#cx,#ag,#cart{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+  #cart>p,#cart>.meta,#cx>.meta,#cx>.acts{grid-column:1/-1;margin:0}
+  #cx .item,#ag .item,#cart .item{margin:0}
+  #acclist .bar{margin:0;padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.42);border:1px solid rgba(255,255,255,.75);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+  #acclist .bar .l{flex-direction:column;gap:2px;margin-bottom:10px}
+  #acclist .bar .l span:last-child{text-align:left;font-weight:500;color:var(--mute);font-size:13px}
+  #acclist>:has(.edit),#cx>.item:has(.edit),#ag>.item:has(.edit),#cart>.item:has(.edit){grid-column:1/-1}
+  .panel>.edit{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));max-width:860px}
+}
+@media (min-width:900px){.panel{padding:24px}.panel h2{font-size:17px;margin-bottom:16px}}
+</style>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const SUBS={
+ v4:[["geral","Visão geral"],["contas","Contas"],["cartoes","Cartões"]],
+ v6:[["cx","Caixinhas"],["moedas","Moedas"],["rend","Rendimentos"]],
+ v5:[["contas","Contas e cartões"],["cats","Categorias"],["lims","Limites"],["seg","Backup e senha"]]};
+const MAP={
+ v4:{"Saldo disponível hoje":"geral","Projeção dos próximos 30 dias":"geral","Cartões de crédito":"cartoes","Contas em aberto":"contas","Pagas recentemente":"contas"},
+ v6:{"Caixinhas":"cx","Moedas":"moedas","Rendimento de conta":"rend"},
+ v5:{"Contas e cartões":"contas","Categorias":"cats","Limites mensais por categoria":"lims","Backup dos dados":"seg","Trocar minha senha":"seg"}};
+const WIDE=["Cartões de crédito","Contas em aberto","Pagas recentemente","Caixinhas","Moedas","Contas e cartões"];
+function setSub(id,k){
+  const s=$(id);
+  s.querySelectorAll(":scope>[data-s]").forEach(p=>{p.hidden=p.dataset.s!==k});
+  s.querySelectorAll(".subtabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.k===k));
+}
+Object.keys(SUBS).forEach(id=>{
+  const sec=$(id);if(!sec)return;
+  [...sec.children].forEach(p=>{
+    const h=p.querySelector("h2"),t=h?h.textContent.trim():"";
+    const k=h?MAP[id][t]:(p.classList.contains("note")?"contas":null);
+    if(k)p.dataset.s=k;
+    if(WIDE.includes(t))p.classList.add("wide");
+  });
+  const bar=document.createElement("div");
+  bar.className="subtabs";bar.setAttribute("role","tablist");
+  bar.innerHTML=SUBS[id].map(([k,l])=>`<button role="tab" data-k="${k}">${l}</button>`).join("");
+  bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)setSub(id,b.dataset.k)});
+  sec.prepend(bar);setSub(id,SUBS[id][0][0]);
+});
+[["an","Adicionar conta ou cartão"],["cn","Adicionar categoria"],["lc","Definir limite mensal"]].forEach(([id,t])=>{
+  const e=$(id)&&$(id).closest(".edit");if(e)e.insertAdjacentHTML("beforebegin",`<p class="fh">${t}</p>`);
+});
+})();
+</script>
 </body>
 </html>
