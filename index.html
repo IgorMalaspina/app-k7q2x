@@ -1353,5 +1353,196 @@ $("v5").addEventListener("click",async e=>{
 });
 })();
 </script>
+  <style>
+.w2{grid-column:1/-1}
+.pn-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kp{padding:14px;border-radius:20px;background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.8);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+.kp small{display:block;color:var(--mute);font-size:12px}.kp b{display:block;font-size:20px;letter-spacing:-.02em}.kp i{font-style:normal;font-size:12px;color:var(--mute)}
+.tw{overflow:auto;max-height:72vh;border-radius:18px;border:1px solid var(--glass-edge);background:rgba(255,255,255,.4)}
+.tb{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+.tb th,.tb td{padding:8px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+.tb th{position:sticky;top:0;background:#eaeeec;z-index:2;font-weight:600;color:var(--g-deep)}
+.tb td:first-child,.tb th:first-child{position:sticky;left:0;text-align:left;background:#f1f4f2;z-index:1;min-width:240px}
+.tb th:first-child{z-index:3}
+.tb tr.l0 td{font-weight:700;background:#e4eee8}.tb tr.l0 td:first-child{background:#dbe8e0}
+.tb tr.tt td{font-weight:700;border-top:2px solid var(--g)}
+.tb .fc{font-style:italic;color:#2E5C8A}.tb .cur{background:rgba(244,187,44,.22)}.tb .ng{color:var(--out)}
+.tg2{border:0;background:none;color:var(--g);font-weight:800;font-size:15px;width:22px;cursor:pointer;padding:0}
+.nat{border:0;background:rgba(98,153,209,.22);color:#2E5C8A;border-radius:999px;font-size:11px;font-weight:700;padding:2px 9px;margin-left:6px;cursor:pointer}
+.nat.f{background:rgba(242,140,56,.22);color:#9A5410}
+</style>
+<script>
+(function(){
+const X={nat:{},open:new Set(["Receitas"]),ids:new Set(),exp:[],keys:[],reg:"k",ahead:12,who:"Todos"};
+const FIX=["Moradia","Assinaturas","Educação","Impostos e taxas"];
+const nat=c=>X.nat[c]||(FIX.includes(c)?"Fixa":"Variável");
+const MS=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const ml=k=>MS[+k.slice(5,7)-1]+"/"+k.slice(2,4),mk=d=>d.slice(0,7);
+const cl=n=>Math.abs(n)<.005?"–":brl(n);
+const td=n=>`<td class="${n<0?"ng":""}">${cl(n)}</td>`;
+const pc=(a,b)=>b?Math.round(a/Math.abs(b)*100)+"%":"–";
+const dl=(a,b)=>b?`${a>=b?"▲":"▼"} ${Math.abs(Math.round((a-b)/Math.abs(b)*100))}%`:"–";
+const v2=$("v2");
+ 
+/* sub-abas do Resumo (a barra fica fora do #v2 para não perder o fundo do primeiro painel) */
+const SUB=[["geral","Visão geral"],["painel","Painel"],["dre","DRE"],["tab","Tabelão"]];
+[...v2.children].forEach(p=>p.dataset.s="geral");
+const mkp=(id,k,h)=>{const p=document.createElement("div");p.className="panel w2";p.id=id;p.dataset.s=k;p.innerHTML=h;v2.appendChild(p)};
+mkp("pnl","painel",`<h2 id="pnh"></h2><div class="pn-g" id="pnk"></div><div id="pnc"></div><p class="fh">Despesas por categoria</p><div class="tw" id="pnt"></div><p class="fh">Patrimônio</p><div id="pnp"></div>`);
+mkp("drp","dre",`<h2 id="drh"></h2><div class="tw" id="drt"></div><div id="drc"></div>`);
+mkp("tbp2","tab",`<h2>Tabelão: caixa dos próximos meses</h2>
+<div class="edit"><label>Visão<select id="tbr"><option value="k">Caixa (cartão pelo vencimento)</option><option value="c">Competência (data da compra)</option></select></label><label>Meses à frente<select id="tbn"><option>6</option><option selected>12</option><option>24</option></select></label><label>Pessoa<select id="tbp"><option>Todos</option><option>Igor</option><option>Dani</option></select></label></div>
+<div class="acts" style="margin:10px 0"><button id="tbx">Expandir tudo</button><button id="tbc">Recolher tudo</button><button id="tbe">Exportar planilha</button></div>
+<div class="tw" id="tbw"></div><p class="sub">Itálico azul = previsto. Mês atual em amarelo. O saldo parte do “Saldo disponível hoje” (Agenda) e considera contas a pagar e receber, parcelas e faturas futuras.</p>`);
+const bar=document.createElement("div");bar.className="subtabs";bar.setAttribute("role","tablist");
+bar.innerHTML=SUB.map(([k,l])=>`<button role="tab" data-k="${k}">${l}</button>`).join("");
+v2.before(bar);
+function setSub(k){v2.querySelectorAll(":scope>[data-s]").forEach(p=>{p.hidden=p.dataset.s!==k});bar.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b.dataset.k===k))}
+bar.addEventListener("click",e=>{const b=e.target.closest("button");if(b)setSub(b.dataset.k)});
+setSub("geral");bar.hidden=true;
+ 
+/* cálculo comum (competência) */
+function calc(){
+  const now=iso(),sel=cy+"-"+(cm==="00"?(cy===now.slice(0,4)?now.slice(5,7):"12"):cm);
+  const prev=keyAdd(sel,-1),m3=[sel,prev,keyAdd(sel,-2)],D={};
+  entries.filter(e=>cp==="Todos"||e.w===cp).forEach(e=>{
+    const m=mk(e.d),o=D[e.c]||(D[e.c]=[0,0,0,0]);
+    if(m===sel)o[0]+=e.v;if(m===prev)o[1]+=e.v;if(m3.includes(m))o[2]+=e.v/3;if(m.slice(0,4)===cy&&m<=sel)o[3]+=e.v;
+  });
+  return{sel,prev,D};
+}
+const sumC=(D,f)=>{const r=[0,0,0,0];Object.keys(D).filter(f).forEach(c=>D[c].forEach((v,i)=>{r[i]+=v}));return r};
+const lab=k=>MES[+k.slice(5,7)-1]+" de "+k.slice(0,4);
+ 
+/* PAINEL */
+function renderPainel(){
+  const{sel,prev,D}=calc(),inc=sumC(D,isInc),exp=sumC(D,c=>!isInc(c)),r=inc[0]-exp[0],rp=inc[1]-exp[1];
+  $("pnh").textContent="Painel · "+lab(sel)+(cp==="Todos"?"":" · "+cp);
+  const kp=(l,v,p,c)=>`<div class="kp"><small>${l}</small><b style="color:var(${c||"--ink"})">${v}</b><i>${p}</i></div>`;
+  const tx=(a,b)=>b?Math.round(a/b*100)+"%":"–";
+  $("pnk").innerHTML=kp("Receitas",brl(inc[0]),"vs mês ant. "+dl(inc[0],inc[1]),"--in")+kp("Despesas",brl(exp[0]),"vs mês ant. "+dl(exp[0],exp[1]))+kp("Resultado",brl(r),"vs mês ant. "+dl(r,rp),r<0?"--out":"--in")+kp("Taxa de poupança",tx(r,inc[0]),"mês ant.: "+tx(rp,inc[1]));
+  const ks=[];for(let i=-11;i<=0;i++)ks.push(keyAdd(sel,i));
+  const M={};ks.forEach(k=>{M[k]=[0,0]});
+  entries.forEach(e=>{if((cp==="Todos"||e.w===cp)&&M[mk(e.d)])M[mk(e.d)][e.t==="in"?0:1]+=e.v});
+  const mx=Math.max(1,...ks.map(k=>Math.max(...M[k]))),gw=680/12,Y=v=>200-v/mx*170;
+  let s='<svg viewBox="0 0 720 230" style="width:100%;height:auto" role="img" aria-label="Receitas e despesas dos últimos 12 meses">',pts=[];
+  ks.forEach((k,i)=>{const x=20+i*gw,[a,b]=M[k];
+    s+=`<rect x="${x+6}" y="${Y(a)}" width="19" height="${200-Y(a)}" rx="5" fill="#1E9A53"/><rect x="${x+27}" y="${Y(b)}" width="19" height="${200-Y(b)}" rx="5" fill="#6299D1"/><text x="${x+gw/2}" y="219" text-anchor="middle" font-size="11" fill="#55615E">${ml(k)}</text>`;
+    pts.push((x+gw/2)+","+Y(Math.max(a-b,0)))});
+  s+=`<polyline points="${pts.join(" ")}" fill="none" stroke="#F28C38" stroke-width="3" stroke-linecap="round"/></svg>`;
+  $("pnc").innerHTML=s+`<div class="legend" style="justify-content:center;gap:18px;margin:6px 0 4px"><span><i class="dot" style="background:#1E9A53"></i>Receitas</span><span><i class="dot" style="background:#6299D1"></i>Despesas</span><span><i class="dot" style="background:#F28C38"></i>Resultado (se positivo)</span></div>`;
+  const cs=Object.keys(D).filter(c=>!isInc(c)).sort((a,b)=>D[b][0]-D[a][0]).slice(0,8);
+  $("pnt").innerHTML=`<table class="tb"><tr><th>Categoria</th><th>Mês</th><th>Mês ant.</th><th>Média 3m</th><th>Variação</th></tr>`+(cs.map(c=>`<tr><td>${esc(c)}</td><td>${cl(D[c][0])}</td><td>${cl(D[c][1])}</td><td>${cl(D[c][2])}</td><td>${dl(D[c][0],D[c][1])}</td></tr>`).join("")||`<tr><td colspan="5">Sem despesas no período.</td></tr>`)+`</table>`;
+  const cx=caixas.reduce((t,c)=>t+cxBal(c.id)+foreignVal(holdings(m=>m.cid===c.id)),0);
+  const fat=accounts.filter(a=>a.t===CARD).reduce((t,a)=>t+invoices(akey(a)).reduce((u,i)=>u+Math.max(i.owed,0),0),0),sd=saldo||0;
+  $("pnp").innerHTML=`<div class="pn-g"><div class="kp"><small>Saldo disponível</small><b>${brl(sd)}</b></div><div class="kp"><small>Caixinhas e moedas</small><b>${brl(cx)}</b></div><div class="kp"><small>Faturas em aberto</small><b style="color:var(--out)">− ${brl(fat)}</b></div><div class="kp"><small>Patrimônio líquido</small><b>${brl(sd+cx-fat)}</b></div></div>`;
+}
+ 
+/* DRE */
+function renderDre(){
+  const{sel,D}=calc(),inc=sumC(D,isInc),exp=sumC(D,c=>!isInc(c)),res=inc.map((v,i)=>v-exp[i]);
+  $("drh").textContent="DRE · "+lab(sel)+(cp==="Todos"?"":" · "+cp);
+  const row=(n,v,cls,lv)=>`<tr class="${cls||""}"><td style="padding-left:${10+(lv||0)*18}px">${esc(n)}</td>${v.map(td).join("")}<td>${pc(v[0],inc[0])}</td><td>${dl(v[0],v[1])}</td></tr>`;
+  const grp=(t,f)=>row(t,sumC(D,f),"l0")+Object.keys(D).filter(f).sort((a,b)=>D[b][0]-D[a][0]).map(c=>row(c,D[c],"",1)).join("");
+  $("drt").innerHTML=`<table class="tb"><tr><th>Demonstração do resultado</th><th>Mês</th><th>Mês ant.</th><th>Média 3m</th><th>Acum. ano</th><th>AV %</th><th>AH %</th></tr>`
+    +grp("(+) Receitas",isInc)
+    +grp("(−) Despesas fixas",c=>!isInc(c)&&nat(c)==="Fixa")
+    +grp("(−) Despesas variáveis",c=>!isInc(c)&&nat(c)!=="Fixa")
+    +row("(=) Total de despesas",exp,"tt")+row("(=) Resultado do período",res,"tt")
+    +`<tr><td>Taxa de poupança</td>${res.map((v,i)=>`<td>${pc(v,inc[i])}</td>`).join("")}<td></td><td></td></tr></table>`;
+  const wf=e=>cp==="Todos"||e.w===cp;
+  const cc=sum(entries.filter(e=>wf(e)&&e.t==="out"&&e.p===CARD&&mk(e.d)===sel)),pg=sum(pags.filter(p=>wf(p)&&mk(p.d)===sel));
+  const ap=sum(movs.filter(m=>m.t==="Aporte"&&mk(m.d)===sel));
+  $("drc").innerHTML=`<p class="fh">Conciliação com o caixa</p><div class="bar"><div class="l"><span>Resultado do período</span><span>${brl(res[0])}</span></div><div class="l"><span>(−) Compras no cartão do mês</span><span>${brl(cc)}</span></div><div class="l"><span>(+) Faturas pagas no mês</span><span>${brl(pg)}</span></div><div class="l"><b>(=) Variação de caixa</b><b>${brl(res[0]-cc+pg)}</b></div></div><p class="sub">Informativo: guardado em caixinhas no mês ${brl(ap)} (não entra como despesa). AV % = sobre a receita do mês; AH % = variação contra o mês anterior.</p>`;
+}
+ 
+/* TABELÃO */
+function facts(reg){
+  const L=[],today=iso(),hz=keyAdd(today.slice(0,7),24);
+  entries.forEach(e=>{let d=e.d;
+    if(reg==="k"&&e.t==="out"&&e.p===CARD){const c=card(e.a);if(c&&c.fc&&e.fa)d=dueDate(e.fa,c.fc,c.vc)}
+    L.push({m:mk(d),d,c:e.c,w:e.w,t:e.t,v:e.v})});
+  agenda.filter(a=>a.st==="Aberta"&&a.v!=null).forEach(a=>{
+    for(let i=0;i<(a.rec==="Mensal"?25:1);i++){
+      const d=i?addMonths(a.dt,i,a.dd):a.dt;if(mk(d)>hz)break;
+      L.push({m:mk(d),d,c:a.c,w:a.w,t:a.t==="Receber"?"in":"out",v:a.v,ov:i===0&&d<=today})}});
+  return L;
+}
+function renderTab(){
+  const today=iso(),now=today.slice(0,7),keys=[];for(let i=-2;i<=X.ahead;i++)keys.push(keyAdd(now,i));
+  X.keys=keys;
+  const L=facts(X.reg).filter(f=>(X.who==="Todos"||f.w===X.who)&&keys.includes(f.m));
+  const root={ch:{}},IN={},OUT={},REM={};
+  L.forEach(f=>{
+    let n=root;[f.t==="in"?"Receitas":nat(f.c)==="Fixa"?"Despesas fixas":"Despesas variáveis",f.c,f.w].forEach(s=>{n=n.ch[s]||(n.ch[s]={n:s,ch:{},v:{}});n.v[f.m]=(n.v[f.m]||0)+f.v});
+    (f.t==="in"?IN:OUT)[f.m]=((f.t==="in"?IN:OUT)[f.m]||0)+f.v;
+    if(f.d>today||f.ov)REM[f.m]=(REM[f.m]||0)+(f.t==="in"?f.v:-f.v);
+  });
+  const tot=n=>keys.reduce((s,k)=>s+(n.v&&n.v[k]||0),0),R=[];X.ids=new Set();X.exp=[];
+  const walk=(n,lv,id,vis)=>{
+    const kids=Object.values(n.ch).sort((a,b)=>tot(b)-tot(a)),open=X.open.has(id);
+    if(kids.length)X.ids.add(id);
+    const v=keys.map(k=>(n.v&&n.v[k])||0);
+    X.exp.push([n.n,v,lv]);
+    if(vis)R.push({n:n.n,lv,id,has:!!kids.length,open,v});
+    kids.forEach(c=>walk(c,lv+1,id+"|"+c.n,vis&&open));
+  };
+  ["Receitas","Despesas fixas","Despesas variáveis"].forEach(g=>walk(root.ch[g]||{n:g,ch:{},v:{}},0,g,true));
+  const cls=k=>k>now?"fc":k===now?"cur":"",c2=(v,k)=>`<td class="${cls(k)}${v<0?" ng":""}">${v==null?"–":cl(v)}</td>`;
+  const res=keys.map(k=>(IN[k]||0)-(OUT[k]||0)),need=keys.map(k=>Math.max(0,(OUT[k]||0)-(IN[k]||0)));
+  let bal=saldo||0;const ini=[],fin=[];
+  keys.forEach(k=>{if(k<now){ini.push(null);fin.push(null);return}const a=bal;bal=a+(REM[k]||0);ini.push(a);fin.push(bal)});
+  const sm=a=>a.reduce((x,y)=>x+(y||0),0);
+  const foot=(n,v,tt,t)=>`<tr class="tt"><td>${n}</td>${v.map((x,i)=>c2(x,keys[i])).join("")}<td>${t?cl(sm(v)):""}</td></tr>`;
+  X.exp.push(["Resultado do mês",res,0],["Necessidade de caixa (despesas − receitas)",need,0],["Saldo inicial",ini,0,1],["Saldo final projetado",fin,0,1]);
+  $("tbw").innerHTML=`<table class="tb"><tr><th>Linha</th>${keys.map(k=>`<th class="${cls(k)}">${ml(k)}</th>`).join("")}<th>Total</th></tr>`
+    +R.map(r=>`<tr class="${r.lv?"":"l0"}"><td style="padding-left:${8+r.lv*18}px">${r.has?`<button class="tg2" data-t="${esc(r.id)}" aria-label="Abrir ou fechar">${r.open?"−":"+"}</button>`:'<span style="display:inline-block;width:22px"></span>'}${esc(r.n)}</td>${r.v.map((v,i)=>c2(v,keys[i])).join("")}<td>${cl(sm(r.v))}</td></tr>`).join("")
+    +foot("Resultado do mês",res,0,1)+foot("Necessidade de caixa",need,0,1)+foot("Saldo inicial",ini)+foot("Saldo final projetado",fin)+`</table>`;
+}
+function exportTab(){
+  const c=s=>'"'+String(s).replace(/"/g,'""')+'"',f=v=>v==null?"":String(Math.round(v*100)/100).replace(".",",");
+  const lines=[["Linha"].concat(X.keys.map(ml),"Total")].concat(X.exp.map(r=>["  ".repeat(r[2]||0)+r[0]].concat(r[1].map(f),r[3]?"":f(r[1].reduce((a,b)=>a+(b||0),0)))));
+  const blob=new Blob(["\ufeff"+lines.map(l=>l.map(c).join(";")).join("\n")],{type:"text/csv;charset=utf-8"});
+  const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="tabelao-"+iso()+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);
+}
+v2.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.t){X.open.has(b.dataset.t)?X.open.delete(b.dataset.t):X.open.add(b.dataset.t);renderTab()}
+  else if(b.id==="tbx"){X.open=new Set(X.ids);renderTab()}
+  else if(b.id==="tbc"){X.open=new Set();renderTab()}
+  else if(b.id==="tbe")exportTab();
+});
+v2.addEventListener("change",e=>{
+  const i=e.target.id,v=e.target.value;
+  if(i==="tbr")X.reg=v;else if(i==="tbn")X.ahead=+v;else if(i==="tbp")X.who=v;else return;
+  renderTab();
+});
+ 
+/* CADASTRO: fixa ou variável em cada categoria de despesa */
+function natChips(){
+  document.querySelectorAll("#catlist .chip").forEach(ch=>{
+    const n=ch.childNodes[0].textContent.trim();
+    if(isInc(n)||ch.querySelector(".nat"))return;
+    const f=nat(n)==="Fixa";
+    ch.insertAdjacentHTML("beforeend",`<button class="nat${f?" f":""}" data-nat="${esc(n)}" title="Trocar entre fixa e variável">${f?"Fixa":"Variável"}</button>`);
+  });
+}
+$("v5").addEventListener("click",async e=>{
+  const b=e.target.closest("button[data-nat]");if(!b)return;
+  const n=b.dataset.nat;
+  if(await run(sb.from("categorias").update({natureza:nat(n)==="Fixa"?"Variável":"Fixa"}).eq("nome",n)))await refresh();
+});
+ 
+const _render=render,_refresh=refresh,_tab=tab;
+const aug=()=>[renderPainel,renderDre,renderTab,natChips].forEach(f=>{try{f()}catch(e){console.error(e)}});
+render=function(){_render();aug()};
+refresh=async function(){
+  await _refresh();
+  try{const k=await fetchAll("categorias");X.nat={};k.forEach(r=>{if(r.natureza)X.nat[r.nome]=r.natureza})}catch(e){}
+  aug();
+};
+tab=function(n){_tab(n);bar.hidden=n!==2};
+})();
+</script>
 </body>
 </html>
