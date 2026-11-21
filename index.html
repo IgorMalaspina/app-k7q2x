@@ -271,6 +271,118 @@ details.mn summary::-webkit-details-marker{display:none}
   body.fs .tw{max-height:calc(100vh - 150px)}
 }
 @media (max-width:899px){.pn-cols .fh{margin-top:14px}}
+
+/* ===== Camada v4: vidro, botões, web ===== */
+:root{--glass:rgba(255,255,255,.56);--gedge:rgba(255,255,255,.88);--gsh:0 12px 32px rgba(20,53,45,.11),0 1px 0 rgba(255,255,255,.95) inset;--r:24px;--r-sm:16px;--bl:blur(22px) saturate(170%)}
+html{background:
+ radial-gradient(55% 45% at 6% 4%,rgba(47,178,103,.34),transparent 65%),
+ radial-gradient(50% 40% at 98% 10%,rgba(98,153,209,.30),transparent 65%),
+ radial-gradient(60% 50% at 88% 96%,rgba(155,198,75,.30),transparent 65%),
+ radial-gradient(50% 45% at 0% 92%,rgba(43,90,71,.26),transparent 65%),
+ linear-gradient(180deg,#EDF3EF,#E1E9E4);background-attachment:fixed}
+.panel,.acc,.tw,.kp,.kpi,.item,.compose,.banner,.ticker,.app,.subtabs,.pf button,.cal .d,.chip,.calh button{-webkit-backdrop-filter:var(--bl);backdrop-filter:var(--bl)}
+.panel{background:var(--glass);border:1px solid var(--gedge);box-shadow:var(--gsh);border-radius:var(--r);padding:20px}
+.panel .item,.kp,.kpi,.chip{background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.85);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+.item{background:rgba(255,255,255,.62);border:1px solid var(--gedge);border-radius:18px;box-shadow:0 4px 14px rgba(20,53,45,.06),inset 0 1px 0 rgba(255,255,255,.9)}
+.acc{background:var(--glass);border:1px solid var(--gedge);box-shadow:var(--gsh);border-radius:22px}
+.bc{border-radius:0;min-height:104px;box-shadow:inset 0 -30px 40px rgba(0,0,0,.10)}
+.compose{background:rgba(255,255,255,.7);border:1px solid var(--gedge);box-shadow:var(--gsh);border-radius:26px}
+.ticker,.banner{background:rgba(255,255,255,.62);border-color:var(--gedge)}
+.app{background:rgba(255,255,255,.72)}
+.subtabs{background:rgba(255,255,255,.5);border:1px solid var(--gedge);box-shadow:var(--gsh);padding:5px}
+.subtabs button{padding:10px 16px;font-size:13.5px}
+.subtabs button[aria-selected="true"]{background:linear-gradient(180deg,#2FB267,#16884A);box-shadow:0 6px 14px rgba(20,120,70,.34),inset 0 1px 0 rgba(255,255,255,.45)}
+.tw{background:rgba(255,255,255,.66);border-color:var(--gedge)}
+.srch,.period select,.row input,.edit input,.edit select,.sc input,#login input{background:rgba(255,255,255,.75);border:1px solid rgba(20,53,45,.12)}
+.nav{background:linear-gradient(165deg,rgba(43,100,76,.88),rgba(16,46,38,.90));border:1px solid rgba(255,255,255,.28);box-shadow:0 18px 40px rgba(16,46,38,.34),inset 0 1px 0 rgba(255,255,255,.30)}
+.nav button[aria-selected="true"]{background:linear-gradient(180deg,#34BA6D,#17884A);box-shadow:0 6px 16px rgba(10,100,55,.5),inset 0 1px 0 rgba(255,255,255,.5)}
+.pill{background:rgba(255,255,255,.66);border-color:var(--gedge);box-shadow:0 4px 12px rgba(20,53,45,.08),inset 0 1px 0 rgba(255,255,255,.9)}
+/* cartão de saldo (herói escuro) */
+#v2>.panel:has(#kpis){background:linear-gradient(145deg,#2F7258 0%,#173F33 70%);border-color:rgba(255,255,255,.22);color:#fff;--ink:#fff;--mute:rgba(255,255,255,.78);--out:#FFB4A8;--in:#8CF0B4;box-shadow:0 22px 44px rgba(16,46,38,.30),inset 0 1px 0 rgba(255,255,255,.3);position:relative;overflow:hidden}
+#v2>.panel:has(#kpis)::after{content:"";position:absolute;right:-60px;top:-70px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+#v2>.panel:has(#kpis) .hero strong{color:#fff}
+#v2>.panel:has(#kpis) .kpi{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.24);box-shadow:none}
+#v2>.panel:has(#kpis) .kpi strong{color:#fff}
+#v2>.panel:has(#kpis) .kpi.out .ki{background:#6FA6DB}
+/* botões: 3 níveis */
+.acts button{height:40px;padding:0 16px;display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:rgba(30,154,83,.11);border:1px solid rgba(30,154,83,.22);color:#0F6B3A;font-weight:650;font-size:13.5px}
+.acts button:hover{background:rgba(30,154,83,.20)}
+.acts .primary{background:linear-gradient(180deg,#2FB267,#16884A);border:0;color:#fff;box-shadow:0 8px 18px rgba(20,120,70,.32),inset 0 1px 0 rgba(255,255,255,.42)}
+.acts .primary:hover{filter:brightness(1.06)}
+.acts .danger{background:linear-gradient(180deg,#E36B59,#C4472F);color:#fff;border:0;box-shadow:0 8px 18px rgba(200,70,50,.28)}
+.acts button::before{content:"";display:none;width:16px;height:16px;flex:none;background:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.acts :is([data-a="e"],[data-g="ed"],[data-x="ae"],[data-c="ed"])::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E");display:inline-block}
+.acts :is([data-a="d"],[data-g="del"],[data-x="a"],[data-c="del"],.acts .danger)::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18'/%3E%3Cpath d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'/%3E%3Cpath d='M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E");display:inline-block}
+.acts :is([data-g="pay"],[data-h="pay"],[data-c="dep"],[data-a="s"],[data-g="ok"],[data-h="ok"],[data-x="as"],[data-c="mok"],[data-g="es"],[data-c="es"])::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");display:inline-block}
+.acts :is(#aadd,#cadd,#ladd,#rcb,#bkb,#pwb,[data-c="new"],[data-c="ns"],#trb)::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");display:inline-block}
+.acts :is([data-a="c"],[data-g="x"],[data-h="x"],[data-c="nx"],[data-x="ac"])::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E");display:inline-block}
+.acts :is([data-c="ret"])::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");display:inline-block}
+.acts :is([data-go="cartoes"])::before{--i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='5' width='20' height='14' rx='2'/%3E%3Cpath d='M2 10h20'/%3E%3C/svg%3E");display:inline-block}
+.acts [data-g="del"],.acts [data-a="d"],.acts [data-x="a"],.acts [data-c="del"]{background:rgba(201,80,63,.10);border-color:rgba(201,80,63,.25);color:#B03A28}
+.acts .danger[data-g="del"],.acts .danger[data-a="d"],.acts .danger[data-c="del"]{background:linear-gradient(180deg,#E36B59,#C4472F);color:#fff}
+.mnb button{background:none!important;border:0!important;box-shadow:none!important;color:var(--g-deep)!important;height:auto;justify-content:flex-start}
+.mnb .danger,.mnb [data-c="del"]{color:#B03A28!important}
+details.mn summary{background:rgba(255,255,255,.7);height:40px;width:42px}
+.mnb{background:rgba(255,255,255,.92);-webkit-backdrop-filter:var(--bl);backdrop-filter:var(--bl);border-radius:18px}
+.pf button{background:rgba(255,255,255,.6);border-color:var(--gedge)}
+.pf button[aria-pressed="true"]{background:linear-gradient(180deg,#2B5A47,#14352D);box-shadow:0 6px 14px rgba(20,53,45,.3)}
+.cal .d{background:rgba(255,255,255,.6);border-color:rgba(255,255,255,.9)}
+.cal .d.s{background:linear-gradient(180deg,#2FB267,#16884A);box-shadow:0 8px 16px rgba(20,120,70,.32)}
+.calh button{background:rgba(255,255,255,.65)}
+#nvt{display:none}
+.calw{display:block}
+/* ---------- WEB ---------- */
+@media (min-width:900px){
+  body{font-size:15px;max-width:1720px}
+  #app{padding:16px;gap:18px}
+  .nav{width:236px;padding:16px 12px;border-radius:30px;transition:width .25s ease}
+  .nav button{font-size:14.5px;padding:12px 16px}
+  #nvt{display:flex;align-items:center;justify-content:flex-start;gap:12px;color:rgba(255,255,255,.7);margin-top:8px;border-top:1px solid rgba(255,255,255,.14);border-radius:0!important;padding-top:14px!important}
+  #nvt svg{transition:transform .25s}
+  .nuser{margin-top:10px}
+  header{padding:4px 8px 12px}
+  h1{font-size:24px}.hs{font-size:13px}
+  .pill{padding:10px 14px;font-size:13px}
+  main{padding:0 8px 64px}
+  .period{padding:0 8px 12px;max-width:760px}.ticker{margin:0 8px 12px}
+  .period select{padding:10px 14px}
+  select,input{font-size:15px}
+  #v2,#v4,#v5,#v6{grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:18px}
+  #v2 .wide,#v2 .w2,#v4 .wide,#v6 .wide,#v5 .wide{grid-column:1/-1}
+  #v2>.panel:has(#kpis){grid-column:1/-1}
+  #v2>.panel:has(#kpis) #kpis{display:grid;grid-template-columns:minmax(240px,1fr) 1.6fr;gap:32px;align-items:center}
+  #v2>.panel:has(#kpis) .hero{margin:0}.hero strong{font-size:40px}
+  .panel{padding:24px}.panel h2{font-size:17px;margin-bottom:16px}
+  #v1,#v3{max-width:900px}
+  #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:12px;align-items:start}
+  #list>.item{margin:0}#list>.item:has(.edit),#list>.acts{grid-column:1/-1}
+  .subtabs{max-width:760px;margin-left:0;grid-column:1/-1}
+  .calw{display:grid;grid-template-columns:minmax(380px,540px) 1fr;gap:34px;align-items:start}
+  .cal .d{aspect-ratio:auto;height:60px;max-height:none;font-size:14.5px;border-radius:14px}
+  .evl{margin-top:0}.evl .fh{margin-top:0;border-top:0;padding-top:0}
+  .acc{border-radius:24px}
+  .tw{max-height:calc(100vh - 290px)}
+  .tb{font-size:13.5px}.tb th,.tb td{padding:8px 12px}
+  #fsb{right:24px;bottom:20px;height:42px}
+  /* menu recolhido (manual, telas médias e tela cheia) */
+  body.nc .nav,body.fs .nav{width:78px;padding:16px 10px}
+  body.nc .brand,body.fs .brand{justify-content:center;padding:2px 0 14px}
+  body.nc .brand>div:last-child,body.fs .brand>div:last-child{display:none}
+  body.nc .nav button span,body.fs .nav button span{display:none}
+  body.nc .nav button,body.fs .nav button{justify-content:center;padding:13px 0}
+  body.nc .nav button[data-n]:not([data-n=""])::after,body.fs .nav button[data-n]:not([data-n=""])::after{position:absolute;top:4px;right:10px;left:auto;margin:0}
+  body.nc #nvt svg{transform:rotate(180deg)}
+  body.nc .nuser span:last-child,body.fs .nuser span:last-child{display:none}
+  body.nc .nuser,body.fs .nuser{justify-content:center;padding:8px 0}
+  body.fs #nvt{display:none}
+  body.fs{max-width:none}body.fs #app{padding:12px}
+  body.fs header,body.fs .ticker{display:none}
+  body.fs .tw{max-height:calc(100vh - 150px)}
+}
+@media (min-width:1500px){#v2,#v4,#v5,#v6{grid-template-columns:repeat(auto-fit,minmax(480px,1fr))}}
+#agk .pn-g{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#agk .kp{padding:11px}#agk .kp b{font-size:17px}
+@media (min-width:900px){#ag,#cx,#acclist{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))!important}#agk .kp b{font-size:21px}}
 </style>
 </head>
 <body>
@@ -318,8 +430,8 @@ details.mn summary::-webkit-details-marker{display:none}
     </section>
     <section id="v4" hidden>
       <div class="panel wide" id="calp"><h2>Calendário</h2>
-        <div class="calh"><button data-cm="-1" aria-label="Mês anterior">‹</button><b id="calt"></b><button data-cm="1" aria-label="Próximo mês">›</button></div>
-        <div class="cal" id="calg"></div><div class="calsum" id="cals"></div><div class="evl" id="cale"></div></div>
+        <div class="calw"><div class="calL"><div class="calh"><button data-cm="-1" aria-label="Mês anterior">‹</button><b id="calt"></b><button data-cm="1" aria-label="Próximo mês">›</button></div>
+        <div class="cal" id="calg"></div><div class="calsum" id="cals"></div></div><div class="evl" id="cale"></div></div></div>
       <div class="panel"><h2>Saldo disponível hoje</h2>
         <div class="row"><input id="sd" inputmode="decimal" placeholder="Ex.: 3500,00" aria-label="Saldo disponível hoje"><button class="btn" id="sdb">Salvar</button></div>
         <p class="sub" id="sdn"></p></div>
@@ -1644,11 +1756,22 @@ const OUT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wid
 const set=on=>{document.body.classList.toggle("fs",on);btn.innerHTML=(on?OUT:IN)+"<span>"+(on?"Sair da tela cheia":"Tela cheia")+"</span>"};
 btn.onclick=()=>{
   const on=!document.body.classList.contains("fs");set(on);
-  try{if(on){const r=document.documentElement.requestFullscreen;if(r)r.call(document.documentElement).catch(()=>{})}else if(document.fullscreenElement)document.exitFullscreen()}catch(e){}
+  try{if(on){const el=document.documentElement,r=el.requestFullscreen||el.webkitRequestFullscreen;if(r){const x=r.call(el);if(x&&x.catch)x.catch(()=>{})}}else if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document)}}catch(e){}
 };
-document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement&&document.body.classList.contains("fs"))set(false)});
+const fch=()=>{if(!document.fullscreenElement&&!document.webkitFullscreenElement&&document.body.classList.contains("fs"))set(false)};document.addEventListener("fullscreenchange",fch);document.addEventListener("webkitfullscreenchange",fch);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.body.classList.contains("fs"))set(false)});
 set(false);document.body.appendChild(btn);
+})();
+</script>
+<script>
+(function(){
+const nv=document.querySelector(".nav"),tg=document.createElement("button");
+tg.id="nvt";tg.type="button";tg.setAttribute("aria-label","Recolher ou expandir o menu");
+tg.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg><span>Recolher menu</span>';
+nv.insertBefore(tg,nv.querySelector(".nuser"));
+const set=on=>{document.body.classList.toggle("nc",on);ls("nc",on?"1":"0")},p=ls("nc");
+document.body.classList.toggle("nc",p==null?innerWidth<1200:p==="1");
+tg.onclick=()=>set(!document.body.classList.contains("nc"));
 })();
 </script>
 </body>
